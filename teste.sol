@@ -5,12 +5,19 @@ pragma solidity >=0.8.2 <0.9.0;
 // TODO: modifier apenas_dono para mudar o preco ou cancelar o contrato (perfil falso?)
 
 contract RedeSocialNotarizada {
-    string  public perfil;      // nome do perfil que estamos salvando
-    address public dono;        // carteira do dono
+    
+    struct RegistroSocial{
+        string perfil;
+        address dono;
+        uint256 horaCriado;
+
+    }
+
+    mapping(address => RegistroSocial) public registros;
+
     uint256 public preco;       // preco em wei para salvar nesse contrato
     address public criador;     // criador do contrato
-    bool public utilizado;      // contrato ja foi utilizado?
-
+   
     // Evento para ser emitido quando o perfil é guardado
     event Guardado(string _perfil, address _dono);
 
@@ -28,17 +35,17 @@ contract RedeSocialNotarizada {
      * @param _dono Endereco da carteira do dono do perfil.
      */
     function guardar(string calldata _perfil, address _dono) public payable {
-        require(!utilizado, "Um perfil ja esta guardado!");
+        require(registros[_dono].horaCriado == 0, "Um perfil ja esta guardado!");
         require(msg.value >= preco, "Precisa receber o valor correto!");
 
         envia_troco();
         envia_pagamento();
 
-        perfil = _perfil;
-        dono = _dono;
-        utilizado = true;
-
-        emit Guardado(perfil, dono);
+        registros[_dono].perfil = _perfil;
+        registros[_dono].dono = _dono;
+        registros[_dono].horaCriado = block.timestamp;
+        
+        emit Guardado(registros[_dono].perfil, registros[_dono].dono);
 
         emitir_token();
     }
@@ -47,7 +54,7 @@ contract RedeSocialNotarizada {
     * @dev Envia troco para o dono do perfil, se necessário. 
     */     
     function envia_troco() private {
-        uint256 valor = preco - msg.value;
+        uint256 valor = msg.value - preco;
 
         if (valor > 0){
             payable(msg.sender).transfer(valor);
