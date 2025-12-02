@@ -27,6 +27,14 @@ interface ERC20Interface {
 
     mapping(address => RegistroSocial) public registros;
 
+    // array para guardar detentor de token
+    address[] public detentores_de_tokens;
+
+    mapping(address => uint) public saldo_tokens;
+
+    mapping(address => mapping(address => uint)) public permite_sacar;
+
+
     uint256 public preco;       // preco em wei para salvar nesse contrato
     address public criador;     // criador do contrato
     uint256 count;
@@ -34,14 +42,38 @@ interface ERC20Interface {
     // Evento para ser emitido quando o perfil é guardado
     event Guardado(string _perfil, address _dono);
 
+
+
+    modifier apenasCriador {
+        require(msg.sender == criador, "Apenas o criador do contrato pode fazer isso!");
+        _;
+    }
+
+
+
     /**
-     * @dev Armazena o preco e criador para usar o contrato
+     * @dev Armazena o preco, criador e cria novos tokens para usar o contrato
      */
     constructor(uint256 _preco) {
         preco = _preco;
         criador = msg.sender;
+        adicionar_detentor(criador);
+        count = 10000;
+
     }
     
+    function adicionar_detentor(address _detentor) private {
+        if (saldo_tokens[_detentor] == 0){
+            detentores_de_tokens.push(_detentor);
+        }
+    }
+
+
+
+
+
+
+
     /**
      * @dev Permite salvar um nome de perfil associado a um endereco de carteira. Requer que seja enviado o valor definido no construtor do contrato.
      * @param _perfil String representando o nome do perfil a ser salvo.
@@ -115,9 +147,16 @@ interface ERC20Interface {
         return 0;
     }
 
-    function transfer(address, uint) external pure returns (bool _sucesso){
+    function transfer(address _para, uint _quantos) public returns (bool _sucesso){
         // Transfere a quantidade _valor de tokens para o endereço _para, e DEVE disparar o evento Transfer. A função DEVE lançar uma exceção se o saldo da conta do chamador da mensagem não tiver tokens suficientes para gastar.
-        return false;
+        require(saldo_tokens[msg.sender] >= _quantos, "Nao ha saldo suficiente para transferir!");
+
+        saldo_tokens[msg.sender] -= _quantos;
+        adicionar_detentor(_para);
+        saldo_tokens[_para]      += _quantos;
+
+        emit Transfer(msg.sender, _para, _quantos);
+        return true;
     }
 
     function approve(address, uint) external pure returns (bool _sucesso){
