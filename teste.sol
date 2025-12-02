@@ -29,7 +29,7 @@ interface ERC20Interface {
 
     // array para guardar detentor de token
     address[] public detentores_de_tokens;
-
+    //controlar saldo de token de cada usuario 
     mapping(address => uint) public saldo_tokens;
 
     mapping(address => mapping(address => uint)) public permite_sacar;
@@ -57,8 +57,8 @@ interface ERC20Interface {
     constructor(uint256 _preco) {
         preco = _preco;
         criador = msg.sender;
-        adicionar_detentor(criador);
         count = 10000;
+        adicionar_detentor(criador);
 
     }
     
@@ -142,9 +142,9 @@ interface ERC20Interface {
         }
     }
 
-    function allowance(address, address) external pure returns (uint remaining){
+    function allowance(address _dono, address _gastador) external view returns (uint remaining){
         // Returns the amount which _spender is still allowed to withdraw from _owner.
-        return 0;
+        return permite_sacar[_dono][_gastador];
     }
 
     function transfer(address _para, uint _quantos) public returns (bool _sucesso){
@@ -159,14 +159,28 @@ interface ERC20Interface {
         return true;
     }
 
-    function approve(address, uint) external pure returns (bool _sucesso){
-        // Permite que _gastador saque da sua conta várias vezes, até a quantidade _valor. Se esta função for chamada novamente, ela sobrescreve a permissão atual com _valor.
-        return false;
+    // Permite que _gastador saque da sua conta várias vezes, até a quantidade _valor. Se esta função for chamada novamente, ela sobrescreve a permissão atual com _valor.
+    function approve(address _gastador, uint _quanto) external returns (bool _sucesso){
+        permite_sacar[msg.sender][_gastador] = _quanto;
+
+        emit Approval(msg.sender, _gastador, _quanto);
+
+        return true;
     }
 
-    function transferFrom(address, address, uint) external pure returns (bool _sucesso){
-        // Transfere a quantidade _valor de tokens do endereço _de para o endereço _para, e DEVE disparar o evento Transfer.
-        return false;
+    function transferFrom(address _de, address _para, uint _quantos) public returns (bool _sucesso){
+        require(saldo_tokens[_de] >= _quantos, "Nao ha saldo suficiente para transferir!");
+        require(permite_sacar[_de][msg.sender] >= _quantos, "Nao tem permissao para retirar!");
+
+        saldo_tokens[_de] = saldo_tokens[_de] - _quantos;
+        adicionar_detentor(_para);
+        saldo_tokens[_para] = saldo_tokens[_para] + _quantos;
+
+        emit Transfer(_de, _para, _quantos);
+
+        permite_sacar[_de][msg.sender] = permite_sacar[_de][msg.sender] - _quantos;
+
+        return true;
     }
 
 
