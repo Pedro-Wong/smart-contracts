@@ -3,21 +3,34 @@
 pragma solidity >=0.8.2 <0.9.0;
 
 // TODO: modifier apenas_dono para mudar o preco ou cancelar o contrato (perfil falso?)
+interface ERC20Interface {
+    function name() external pure returns (string memory);
+    function symbol() external pure returns (string memory);
+    function decimals() external pure returns (uint8);
+    function totalSupply() external view returns (uint);
+    function balanceOf(address tokenOwner) external view returns (uint balance);
+    function allowance(address tokenOwner, address spender) external view returns (uint remaining);
+    function transfer(address to, uint tokens) external returns (bool success);
+    function approve(address spender, uint tokens) external returns (bool success);
+    function transferFrom(address from, address to, uint tokens) external returns (bool success);
 
-contract RedeSocialNotarizada {
+    event Transfer(address indexed from, address indexed to, uint tokens);
+    event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
+}
+
+ contract RedeSocialNotarizada is ERC20Interface{
     
     struct RegistroSocial{
         string perfil;
-        address dono;
         uint256 horaCriado;
-
     }
 
     mapping(address => RegistroSocial) public registros;
 
     uint256 public preco;       // preco em wei para salvar nesse contrato
     address public criador;     // criador do contrato
-   
+    uint256 count;
+
     // Evento para ser emitido quando o perfil é guardado
     event Guardado(string _perfil, address _dono);
 
@@ -42,10 +55,11 @@ contract RedeSocialNotarizada {
         envia_pagamento();
 
         registros[_dono].perfil = _perfil;
-        registros[_dono].dono = _dono;
         registros[_dono].horaCriado = block.timestamp;
+
+        count++;
         
-        emit Guardado(registros[_dono].perfil, registros[_dono].dono);
+        emit Guardado(_perfil, _dono);
 
         emitir_token();
     }
@@ -72,6 +86,52 @@ contract RedeSocialNotarizada {
     function emitir_token() private {
         // emitir toekn para msg.sender
     }
+
+    function name() external pure returns (string memory){
+        return "Rede Social Notarizada Token";
+    }
+    function symbol() external pure returns (string memory){
+        return "RSNT";
+    }
+    function decimals() external pure returns (uint8){
+        return 0;
+    }
+
+    function totalSupply() external view returns (uint){
+        return count;
+    }
+
+    function balanceOf(address _dono) external view returns (uint balance){
+        if (registros[_dono].horaCriado == 0){
+            return 0;
+        }
+        else {
+            return 1;
+        }
+    }
+
+    function allowance(address, address) external pure returns (uint remaining){
+        // Returns the amount which _spender is still allowed to withdraw from _owner.
+        return 0;
+    }
+
+    function transfer(address, uint) external pure returns (bool _sucesso){
+        // Transfere a quantidade _valor de tokens para o endereço _para, e DEVE disparar o evento Transfer. A função DEVE lançar uma exceção se o saldo da conta do chamador da mensagem não tiver tokens suficientes para gastar.
+        return false;
+    }
+
+    function approve(address, uint) external pure returns (bool _sucesso){
+        // Permite que _gastador saque da sua conta várias vezes, até a quantidade _valor. Se esta função for chamada novamente, ela sobrescreve a permissão atual com _valor.
+        return false;
+    }
+
+    function transferFrom(address, address, uint) external pure returns (bool _sucesso){
+        // Transfere a quantidade _valor de tokens do endereço _de para o endereço _para, e DEVE disparar o evento Transfer.
+        return false;
+    }
+
+
+
 
 }
 
