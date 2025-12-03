@@ -59,6 +59,7 @@ interface ERC20Interface {
         criador = msg.sender;
         count = 10000;
         adicionar_detentor(criador);
+        saldo_tokens[criador] = count;
 
     }
     
@@ -68,10 +69,33 @@ interface ERC20Interface {
         }
     }
 
+    
+    /**
+    * - Cria novos tokens
+    * - Quantidade de tokens criados
+    */
+    function mint(uint256 _quantidade) public apenasCriador {
+        count += _quantidade;
+        saldo_tokens[criador] += _quantidade;
+    }
 
 
+     //envia tokens para outros detentores de token
+     function airdrop(uint256 _quantidade) public apenasCriador {
+        uint ajusta_precisao = 1000000000;
 
+        uint tokens_sem_criador = count - saldo_tokens[criador];
+        uint proporcao = ajusta_precisao * _quantidade / tokens_sem_criador;
 
+        for (uint i = 0; i < detentores_de_tokens.length; i++) {
+            address detentor = detentores_de_tokens[i];
+
+            if (detentor != criador && saldo_tokens[detentor] > 0){
+                uint novos_tokens = saldo_tokens[detentor] * proporcao / ajusta_precisao;
+                transfer(detentor, novos_tokens);
+            }
+        }
+    }
 
 
     /**
@@ -81,9 +105,9 @@ interface ERC20Interface {
      */
     function guardar(string calldata _perfil, address _dono) public payable {
         require(registros[_dono].horaCriado == 0, "Um perfil ja esta guardado!");
-        require(msg.value >= preco, "Precisa receber o valor correto!");
+        require(saldo_tokens[msg.sender] >= preco, "Precisa receber o valor correto!");
 
-        envia_troco();
+        // envia_troco();
         envia_pagamento();
 
         registros[_dono].perfil = _perfil;
@@ -96,16 +120,23 @@ interface ERC20Interface {
         emitir_token();
     }
 
-    /**
-    * @dev Envia troco para o dono do perfil, se necessário. 
-    */     
-    function envia_troco() private {
-        uint256 valor = msg.value - preco;
+    // /**
+    // * @dev Envia troco para o dono do perfil, se necessário. 
+    // */     
+    // function envia_troco() private {
+    //     uint256 valor = msg.value - preco;
 
-        if (valor > 0){
-            payable(msg.sender).transfer(valor);
-        }
-    } 
+    //     if (valor > 0){
+    //         payable(msg.sender).transfer(valor);
+    //     }
+    // } 
+
+    function envia_pagamento(address _de) private {
+        transferFrom(_de, criador, preco);
+
+    }
+
+
       
     /**
     * @dev Envia o saldo restante do contrato para o criador
@@ -134,12 +165,7 @@ interface ERC20Interface {
     }
 
     function balanceOf(address _dono) external view returns (uint balance){
-        if (registros[_dono].horaCriado == 0){
-            return 0;
-        }
-        else {
-            return 1;
-        }
+        return saldo_tokens[_dono];
     }
 
     function allowance(address _dono, address _gastador) external view returns (uint remaining){
@@ -182,8 +208,6 @@ interface ERC20Interface {
 
         return true;
     }
-
-
 
 
 }
